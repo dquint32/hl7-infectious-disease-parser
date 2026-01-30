@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HL7 v2 Infectious Disease Parser</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+    <div class="top-bar">
+        <div class="lang-toggle">
+            <button id="enBtn">English</button>
+            <button id="esBtn">Español</button>
+        </div>
+        <button id="darkToggle" class="dark-toggle">🌙 Dark Mode</button>
+    </div>
+
+    <h1 data-i18n="title">HL7 v2 Infectious Disease Parser</h1>
+    <p data-i18n="subtitle">Paste an HL7 v2 message or upload a .txt file.</p>
+
+    <textarea id="hl7Input" placeholder="Paste HL7 message here..."></textarea>
+
+    <div class="actions">
+        <input type="file" id="fileInput" accept=".txt">
+        <button id="parseBtn" data-i18n="parse">Parse Message</button>
+        <button id="downloadBtn" data-i18n="download">Download Summary (PDF)</button>
+    </div>
+
+    <h2 data-i18n="summary">Message Summary</h2>
+    <div id="summaryBox" class="summary-box"></div>
+
+    <h2 data-i18n="parsed">Parsed Output</h2>
+    <pre id="output"></pre>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

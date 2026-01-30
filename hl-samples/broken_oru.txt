@@ -1,0 +1,5 @@
+MSH|^~\&|LAB|HOSPITAL|STATE|CO|202501061200||ORU^R01|BROKEN01|P|2.5.1
+PID|1|||  <-- Missing MRN, name, DOB
+OBR|1||99999|XXXXX^Invalid LOINC^LN|202501061130
+OBX|1|NM|XXXXX^Invalid LOINC^LN||BADVALUE|copies/mL|A|F  <-- Invalid value
+OBX|2|NM|25836-8^HIV Viral Load^LN|  <-- Missing result field
