@@ -1,0 +1,9 @@
+MSH|^~\&|LAB|HOSPITAL|STATE|CO|202501081330||ORU^R01^ORU_R01|HEP0801|P|2.5.1
+PID|1||999007^^^HOSPITAL^MR||ROBERTS^SAM||19720920|M
+OBR|1||90211|HEPTB^Hepatitis panel and IGRA^L|||202501081200
+OBX|1|CWE|13950-1^HAV IgM Ab Ser Ql IA^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|2|CWE|5195-3^HBV surface Ag Ser Ql^LN||260373001^Detected^SCT||Not detected|A|||F
+OBX|3|CWE|24113-3^HBV core IgM Ab Ser Ql IA^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|4|CWE|13955-0^HCV Ab Ser Ql^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|5|CWE|45323-3^M tb IFN-g Bld Ql^LN||260373001^Detected^SCT||Not detected|A|||F
+OBX|6|NM|71772-8^Mitogen IFN-g Bld^LN||9.8|IU/mL|>=0.5|N|||F

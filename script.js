@@ -1,4 +1,8 @@
-// Bilingual dictionary
+// HL7 v2 Infectious Disease Parser — browser demo.
+// Mirrors the rules of the tested Python package in hl7_infectious/ (LOINC registry,
+// v2.5.1 OBX field positions, HL7 table 0078 abnormal flags).
+
+// ---------------------------------------------------------------- i18n
 const i18n = {
     en: {
         title: "HL7 v2 Infectious Disease Parser",
@@ -18,8 +22,8 @@ const i18n = {
     }
 };
 
-// Language toggle
 function setLanguage(lang) {
+    document.documentElement.lang = lang;
     document.querySelectorAll("[data-i18n]").forEach(el => {
         el.textContent = i18n[lang][el.getAttribute("data-i18n")];
     });
@@ -27,147 +31,173 @@ function setLanguage(lang) {
 
 document.getElementById("enBtn").onclick = () => setLanguage("en");
 document.getElementById("esBtn").onclick = () => setLanguage("es");
-
-// Dark mode toggle
-const darkToggle = document.getElementById("darkToggle");
-darkToggle.addEventListener("click", () => {
+document.getElementById("darkToggle").addEventListener("click", () => {
     document.body.classList.toggle("dark");
 });
 
-// LOINC codes for validation
-const validLoinc = [
-    "94500-6", // COVID PCR
-    "92141-1", // Flu A/B PCR
-    "25836-8", // HIV Viral Load
-    "76078-5", // RSV
-    "71772-8", "64084-7", "45323-3", // TB Quantiferon
-    "13950-1", // Hep A IgM
-    "5195-3", "24113-3", // Hep B
-    "13955-0" // Hep C Ab
+// ---------------------------------------------------------------- reference data
+// One registry replaces the separate validLoinc array + nine if-statements.
+// Codes verified against loinc.org. 71772-8 is the IGRA mitogen *control*, so it is
+// recognised but never reported as a TB result.
+const LOINC = {
+    "94500-6": { key: "covid", reportable: true },
+    "92142-9": { key: "fluA", reportable: true },
+    "76078-5": { key: "fluA", reportable: true },
+    "92141-1": { key: "fluB", reportable: true },
+    "85479-4": { key: "rsv", reportable: true },
+    "25836-8": { key: "hiv", reportable: true },
+    "64084-7": { key: "tb", reportable: true },
+    "45323-3": { key: "tb", reportable: true },
+    "71772-8": { key: "tb", reportable: false },
+    "13950-1": { key: "hepA", reportable: true },
+    "5195-3": { key: "hepB", reportable: true },
+    "24113-3": { key: "hepB", reportable: true },
+    "13955-0": { key: "hepC", reportable: true }
+};
+
+const BADGES = [
+    [["covid", "covid", "🦠 COVID-19"], ["fluA", "flu", "🤧 Flu A"], ["fluB", "flu", "🤧 Flu B"]],
+    [["rsv", "rsv", "👶 RSV"], ["hiv", "hiv", "🧬 HIV VL"], ["tb", "tb", "🫁 TB"]],
+    [["hepA", "hepA", "🩸 Hep A IgM"], ["hepB", "hepB", "🩸 Hep B"], ["hepC", "hepC", "🩸 Hep C Ab"]]
 ];
 
+const ABNORMAL_FLAGS = new Set(["L", "H", "LL", "HH", "<", ">", "A", "AA"]); // HL7 table 0078
+const CODED_TYPES = new Set(["CE", "CWE", "CNE"]);
+
+// ---------------------------------------------------------------- helpers
+const escapeHtml = s => String(s).replace(/[&<>"']/g, c => (
+    { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+));
+
+// LOINC Mod-10 check digit (same as Luhn).
+function isValidLoinc(code) {
+    const m = /^(\d{1,7})-(\d)$/.exec(code);
+    if (!m) return false;
+    let total = 0;
+    [...m[1]].reverse().forEach((ch, i) => {
+        let d = Number(ch);
+        if (i % 2 === 0) { d *= 2; if (d > 9) d -= 9; }
+        total += d;
+    });
+    return (10 - (total % 10)) % 10 === Number(m[2]);
+}
+
+function parseMessage(text) {
+    const lines = text.split(/\r\n|\r|\n/).filter(l => l.trim());
+    if (!lines.length || !lines[0].startsWith("MSH") || lines[0].length < 8) {
+        throw new Error("Message must start with an MSH segment.");
+    }
+    const fieldSep = lines[0][3];
+    const [comp, rep] = lines[0].slice(4, 6);
+    const component = (value, n) => (value || "").split(rep)[0].split(comp)[n - 1] || "";
+
+    return {
+        component,
+        segments: lines.map((line, i) => {
+            const fields = line.split(fieldSep);
+            if (fields[0] === "MSH") fields.splice(1, 0, fieldSep); // keep fields[n] === MSH-n
+            return { line: i + 1, name: fields[0], fields };
+        })
+    };
+}
+
+// ---------------------------------------------------------------- parse button
 document.getElementById("parseBtn").addEventListener("click", () => {
     const input = document.getElementById("hl7Input").value.trim();
     if (!input) return;
 
-    const segments = input.split("\n");
-    let output = "";
+    const outputEl = document.getElementById("output");
+    const summaryEl = document.getElementById("summaryBox");
+
+    let msg;
+    try {
+        msg = parseMessage(input);
+    } catch (err) {
+        outputEl.innerHTML = `<span class="error">ERROR: ${escapeHtml(err.message)}</span>`;
+        summaryEl.innerHTML = "";
+        return;
+    }
+
+    const { component, segments } = msg;
+    const results = {};
     let patientName = "";
     let dob = "";
-
-    // Disease summary variables
-    let covid = "";
-    let fluA = "";
-    let fluB = "";
-    let rsv = "";
-    let hiv = "";
-    let tb = "";
-    let hepA = "";
-    let hepB = "";
-    let hepC = "";
+    let output = "";
 
     segments.forEach(seg => {
-        const fields = seg.split("|");
-        const segmentName = fields[0];
+        const f = n => seg.fields[n] || "";
+        output += `\n<span class="segment-header">[${escapeHtml(seg.name)}]</span>\n`;
 
-        // Color-coded segment header
-        output += `\n<span class="segment-header">[${segmentName}]</span>\n`;
-
-        // Missing field detection
-        if (fields.length < 2) {
-            output += `<span class="error">  ERROR: Missing required fields</span>\n`;
+        if (!/^[A-Z][A-Z0-9]{2}$/.test(seg.name)) {
+            output += `<span class="error">  ERROR: line ${seg.line} is not a valid HL7 segment</span>\n`;
+            return;
         }
 
-        // PID summary extraction
-        if (segmentName === "PID") {
-            patientName = fields[5]?.replace("^", " ") || "";
-            dob = fields[7] || "";
+        if (seg.name === "PID") {
+            patientName = [component(f(5), 2), component(f(5), 1)].filter(Boolean).join(" ");
+            dob = f(7);
+            if (!component(f(3), 1)) output += `<span class="error">  ERROR: PID-3 patient identifier is missing</span>\n`;
         }
 
-        // OBX logic
-        if (segmentName === "OBX") {
-            const loinc = fields[3]?.split("^")[0] || "";
-            const testName = fields[3] || "";
-            const result = fields[5] || "";
-            const abnormalFlag = fields[7] || "";
+        if (seg.name === "OBX") {
+            const loinc = component(f(3), 1);
+            const valueType = f(2);
+            const value = CODED_TYPES.has(valueType)
+                ? component(f(5), 2) || component(f(5), 1)
+                : component(f(5), 1);
+            const flag = component(f(8), 1);
+            const abnormal = ABNORMAL_FLAGS.has(flag);
 
-            // LOINC validation
-            if (loinc && !validLoinc.includes(loinc)) {
-                output += `<span class="error">  ERROR: Invalid LOINC code → ${loinc}</span>\n`;
+            if (!isValidLoinc(loinc)) {
+                output += `<span class="error">  ERROR: OBX-3 invalid LOINC code → ${escapeHtml(loinc)}</span>\n`;
+            } else if (!LOINC[loinc]) {
+                output += `<span class="error">  WARNING: LOINC ${escapeHtml(loinc)} not in infectious-disease registry</span>\n`;
+            }
+            if (!value) output += `<span class="error">  ERROR: OBX-5 result value is missing</span>\n`;
+            if (valueType === "NM" && value && Number.isNaN(Number(value))) {
+                output += `<span class="error">  ERROR: OBX-5 is not numeric (OBX-2 = NM)</span>\n`;
             }
 
-            // Disease detection
-            if (loinc === "94500-6") covid = result; // COVID
-            if (testName.includes("Influenza A")) fluA = result; // Flu A
-            if (testName.includes("Influenza B")) fluB = result; // Flu B
-            if (loinc === "76078-5") rsv = result; // RSV
-            if (loinc === "25836-8") hiv = result; // HIV VL
-            if (["71772-8", "64084-7", "45323-3"].includes(loinc)) tb = result; // TB
-            if (loinc === "13950-1") hepA = result; // Hep A IgM
-            if (loinc === "5195-3" || loinc === "24113-3") hepB = result; // Hep B
-            if (loinc === "13955-0") hepC = result; // Hep C Ab
-
-            // Abnormal highlighting
-            if (abnormalFlag === "A") {
-                output += `  Field 5: <span class="abnormal">${result}</span>\n`;
-                output += `  Field 7: <span class="abnormal">${abnormalFlag}</span>\n`;
+            const entry = LOINC[loinc];
+            if (entry && entry.reportable && value) {
+                // Keep an abnormal result rather than letting a later normal one overwrite it.
+                const prev = results[entry.key];
+                if (!prev || !prev.abnormal || abnormal) results[entry.key] = { value, abnormal };
+            }
+            if (abnormal) {
+                output += `  OBX-5 result: <span class="abnormal">${escapeHtml(value)}</span>\n`;
+                output += `  OBX-8 flag:   <span class="abnormal">${escapeHtml(flag)}</span>\n`;
             }
         }
 
-        // Print all fields normally
-        fields.forEach((field, index) => {
-            if (index === 0) return;
-            output += `  Field ${index}: ${field}\n`;
+        seg.fields.forEach((field, n) => {
+            if (n === 0 || field === "") return;
+            output += `  ${escapeHtml(seg.name)}-${n}: ${escapeHtml(field)}\n`;
         });
     });
 
-    // Summary box with disease badges
-    const summaryHtml = `
-<div class="summary-line"><strong>Patient:</strong> ${patientName}</div>
-<div class="summary-line"><strong>DOB:</strong> ${dob}</div>
+    const badge = ([key, cls, label]) => {
+        const r = results[key];
+        const text = r ? escapeHtml(r.value) : "N/A";
+        return `<span class="badge ${cls}">${label}: ${r && r.abnormal ? `<strong>${text}</strong>` : text}</span>`;
+    };
 
-<div class="badge-row">
-  <span class="badge covid">🦠 COVID-19: ${covid || "N/A"}</span>
-  <span class="badge flu">🤧 Flu A: ${fluA || "N/A"}</span>
-  <span class="badge flu">🤧 Flu B: ${fluB || "N/A"}</span>
-</div>
+    summaryEl.innerHTML = `
+<div class="summary-line"><strong>Patient:</strong> ${escapeHtml(patientName)}</div>
+<div class="summary-line"><strong>DOB:</strong> ${escapeHtml(dob)}</div>
+${BADGES.map(row => `<div class="badge-row">${row.map(badge).join("")}</div>`).join("\n")}`;
 
-<div class="badge-row">
-  <span class="badge rsv">👶 RSV: ${rsv || "N/A"}</span>
-  <span class="badge hiv">🧬 HIV VL: ${hiv || "N/A"}</span>
-  <span class="badge tb">🫁 TB: ${tb || "N/A"}</span>
-</div>
-
-<div class="badge-row">
-  <span class="badge hepA">🩸 Hep A IgM: ${hepA || "N/A"}</span>
-  <span class="badge hepB">🩸 Hep B: ${hepB || "N/A"}</span>
-  <span class="badge hepC">🩸 Hep C Ab: ${hepC || "N/A"}</span>
-</div>
-`;
-
-    document.getElementById("summaryBox").innerHTML = summaryHtml;
-
-    // Render parsed output (HTML allowed)
-    const outputEl = document.getElementById("output");
     outputEl.innerHTML = output;
-
-    // Auto-scroll to bottom
     outputEl.scrollTop = outputEl.scrollHeight;
 });
 
-// Load file into textarea
+// ---------------------------------------------------------------- file upload & print
 document.getElementById("fileInput").addEventListener("change", function () {
     const file = this.files[0];
     if (!file) return;
-
     const reader = new FileReader();
-    reader.onload = function (e) {
-        document.getElementById("hl7Input").value = e.target.result;
-    };
+    reader.onload = e => { document.getElementById("hl7Input").value = e.target.result; };
     reader.readAsText(file);
 });
 
-// Download summary as PDF (simple print-to-PDF approach)
-document.getElementById("downloadBtn").addEventListener("click", () => {
-    window.print();
-});
+document.getElementById("downloadBtn").addEventListener("click", () => window.print());

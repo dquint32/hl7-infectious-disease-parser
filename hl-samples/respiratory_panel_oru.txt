@@ -1,0 +1,7 @@
+MSH|^~\&|LAB|HOSPITAL|STATE|CO|202501071015||ORU^R01^ORU_R01|RESP0701|P|2.5.1
+PID|1||999006^^^HOSPITAL^MR||NGUYEN^LINH||20210415|F
+OBR|1||88120|95941-1^Flu A+B+SARS-CoV-2+RSV RNA panel^LN|||202501070940
+OBX|1|CWE|94500-6^SARS-CoV-2 RNA Resp Ql NAA+probe^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|2|CWE|92142-9^Influenza virus A RNA Resp Ql NAA+probe^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|3|CWE|92141-1^Influenza virus B RNA Resp Ql NAA+probe^LN||260415000^Not detected^SCT||Not detected|N|||F
+OBX|4|CWE|85479-4^RSV RNA Upper resp Ql NAA+probe^LN||260373001^Detected^SCT||Not detected|A|||F

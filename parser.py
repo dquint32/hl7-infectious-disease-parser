@@ -1,29 +1,10 @@
-from hl7apy.parser import parse_message
-import sys
+"""Backwards-compatible entry point: ``python parser.py <hl7_file> [--json]``.
 
-def parse_hl7_file(file_path):
-    try:
-        with open(file_path, "r") as f:
-            raw = f.read()
+The logic now lives in the ``hl7_infectious`` package (ingestion / validation /
+transformation). See README for details.
+"""
 
-        msg = parse_message(raw)
-
-        print("\n=== HL7 MESSAGE TYPE ===")
-        print(msg.MSH.MSH_9.to_er7())
-
-        print("\n=== SEGMENTS ===")
-        for segment in msg.children:
-            print(f"\n[{segment.name}]")
-            for field in segment.children:
-                print(f"  {field.name}: {field.to_er7()}")
-
-    except Exception as e:
-        print("\nERROR: Unable to parse HL7 message.")
-        print(f"Details: {e}")
+from hl7_infectious.cli import main
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python parser.py <hl7_file>")
-        sys.exit(1)
-
-    parse_hl7_file(sys.argv[1])
+    raise SystemExit(main())
