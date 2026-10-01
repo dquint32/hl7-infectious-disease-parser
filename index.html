@@ -1,41 +1,91 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <title>HL7 v2 Infectious Disease Parser</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HL7 v2 Infectious Disease Parser | David Quintana</title>
+    <meta name="description" content="Parse HL7 v2.5.1 ORU^R01 lab messages in the browser: LOINC check-digit validation, abnormal-flag detection, and a bilingual summary of infectious-disease results.">
+    <meta name="author" content="David Quintana">
+    <meta name="color-scheme" content="dark light">
+    <meta name="theme-color" content="#0d0d0d">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap">
+    <script>try{var t=localStorage.getItem('dq-theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+    <link rel="stylesheet" href="dq-theme.css">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<div class="container">
-
-    <div class="top-bar">
-        <div class="lang-toggle">
-            <button id="enBtn">English</button>
-            <button id="esBtn">Español</button>
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="dq-header">
+    <div class="dq-container dq-header-inner">
+        <a class="brand" href="https://davidquintana.dev/" aria-label="David Quintana — portfolio home">
+            <span class="brand-mark" aria-hidden="true">DQ</span>
+            <span class="brand-text"><span class="brand-name">David Quintana</span><span class="brand-role">Live demo · HL7 v2 parser</span></span>
+        </a>
+        <div class="dq-tools">
+            <div class="seg" role="group" aria-label="Language / Idioma"><button type="button" id="enBtn" aria-pressed="true">EN</button><button type="button" id="esBtn" aria-pressed="false" lang="es">ES</button></div>
+            <a class="icon-btn" href="https://github.com/dquint32/hl7-infectious-disease-parser" target="_blank" rel="noopener" aria-label="Source code on GitHub"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.3 1.9 1.3 1.1 1.9 2.9 1.3 3.6 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5z"/></svg></a>
+            <button class="icon-btn theme-toggle" type="button" aria-pressed="false" aria-label="Switch to light theme"><svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg></button>
         </div>
-        <button id="darkToggle" class="dark-toggle">🌙 Dark Mode</button>
     </div>
+</header>
 
-    <h1 data-i18n="title">HL7 v2 Infectious Disease Parser</h1>
-    <p data-i18n="subtitle">Paste an HL7 v2 message or upload a .txt file.</p>
+<main id="main" class="dq-main">
+    <div class="dq-container container">
+        <section class="dq-hero">
+            <p class="kicker" data-i18n="kicker">HL7 v2.5.1 · LOINC · Live demo</p>
+            <h1 data-i18n="title">HL7 v2 Infectious Disease Parser</h1>
+            <p class="lead" data-i18n="subtitle">Paste an HL7 v2 message or upload a .txt file.</p>
+            <ul class="tags" aria-label="Technologies">
+                <li class="tag">HL7 v2.5.1</li><li class="tag">LOINC</li><li class="tag">JavaScript</li><li class="tag">Python · pytest</li>
+            </ul>
+        </section>
 
-    <textarea id="hl7Input" placeholder="Paste HL7 message here..."></textarea>
+        <section class="card card-accent input-card dq-form" aria-labelledby="input-title">
+            <div class="input-head">
+                <h2 class="section-title" id="input-title" data-i18n="input">Message</h2>
+                <div class="sample-picker">
+                    <label for="sampleSelect" data-i18n="sample">Load a sample</label>
+                    <select id="sampleSelect">
+                        <option value="" data-i18n="choose">Choose a sample message…</option>
+                            <option value="respiratory_panel_oru.txt">Respiratory panel (ORU^R01)</option>
+                            <option value="covid_oru.txt">COVID-19 PCR (ORU^R01)</option>
+                            <option value="flu_oru.txt">Influenza A/B (ORU^R01)</option>
+                            <option value="hiv_oru.txt">HIV viral load (ORU^R01)</option>
+                            <option value="hepatitis_tb_oru.txt">Hepatitis + TB (ORU^R01)</option>
+                            <option value="broken_oru.txt">Malformed message (validation errors)</option>
+                            <option value="adt_a01.txt">ADT^A01 admit (not a lab result)</option>
+                    </select>
+                </div>
+            </div>
+            <textarea id="hl7Input" spellcheck="false" aria-labelledby="input-title" placeholder="MSH|^~\&amp;|LAB|..."></textarea>
+            <div class="actions">
+                <button type="button" id="parseBtn" class="btn btn-primary" data-i18n="parse">Parse Message</button>
+                <button type="button" id="downloadBtn" class="btn btn-secondary" data-i18n="download">Download Summary (PDF)</button>
+                <label class="btn btn-secondary file-btn"><input type="file" id="fileInput" accept=".txt" class="visually-hidden"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3M7 8l5-5 5 5M5 21h14"/></svg><span data-i18n="upload">Upload .txt file</span></label>
+            </div>
+        </section>
 
-    <div class="actions">
-        <input type="file" id="fileInput" accept=".txt">
-        <button id="parseBtn" data-i18n="parse">Parse Message</button>
-        <button id="downloadBtn" data-i18n="download">Download Summary (PDF)</button>
+        <section class="results" aria-live="polite">
+            <h2 class="section-title" data-i18n="summary">Message Summary</h2>
+            <div id="summaryBox" class="summary-box card"><p class="placeholder" data-i18n="empty">Parse a message to see the patient and results summary.</p></div>
+
+            <h2 class="section-title" data-i18n="parsed">Parsed Output</h2>
+            <pre id="output" tabindex="0" aria-label="Parsed HL7 output"></pre>
+        </section>
     </div>
+</main>
 
-    <h2 data-i18n="summary">Message Summary</h2>
-    <div id="summaryBox" class="summary-box"></div>
+<footer class="dq-footer">
+    <div class="dq-container dq-footer-inner">
+        <p>© 2026 David Quintana · Synthetic HL7 samples — no real patient data.</p>
+        <nav aria-label="Project links"><a href="https://davidquintana.dev/hl7-parser.html">Case study</a><a href="https://github.com/dquint32/hl7-infectious-disease-parser" target="_blank" rel="noopener">Source code</a><a href="https://davidquintana.dev/">Portfolio</a></nav>
+    </div>
+</footer>
 
-    <h2 data-i18n="parsed">Parsed Output</h2>
-    <pre id="output"></pre>
-
-</div>
-
+<script src="dq-theme.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

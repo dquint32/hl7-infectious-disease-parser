@@ -107,7 +107,8 @@ All samples follow HL7 v2.5.1 OBX positions: OBX-5 value, OBX-6 units, OBX-7 ref
 * `hl7_infectious/`: Python package (ingestion / validation / transformation)
 * `tests/`: pytest suite
 * `parser.py`: backwards-compatible CLI entry point
-* `index.html`, `script.js`, `style.css`: browser demo
+* `index.html`, `script.js`, `style.css`: browser demo (with built-in sample messages)
+* `dq-theme.css`, `dq-theme.js`: shared design system, same look as davidquintana.dev (light/dark)
 * `.github/workflows/tests.yml`: CI on Python 3.11–3.13
 
 ---
